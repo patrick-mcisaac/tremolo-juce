@@ -62,19 +62,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 # Adds a plugin target.
-set(TREMOLO_PLUGIN_NAME "TODO: set your plugin name")
+set(TREMOLO_PLUGIN_NAME "Tremolo")
 juce_add_plugin(
   TremoloCoursePlugin
   PRODUCT_NAME
     ${TREMOLO_PLUGIN_NAME}
   VERSION
-    # TODO: add version
+    0.0.0 # 0 forces AU hosts to always refresh
   COMPANY_NAME
-    # TODO: add company
+    "PatrickMcIsaac"
   PLUGIN_MANUFACTURER_CODE
-    # TODO: add plugin manufacturer code
+    Pmci
   PLUGIN_CODE
-    # TODO: add plugin code
+    Trcp
   FORMATS
     Standalone
     AU
@@ -88,7 +88,7 @@ juce_add_plugin(
   VST3_AUTO_MANIFEST
     FALSE
   COPY_PLUGIN_AFTER_BUILD
-    FALSE
+    TRUE 
 )
 
 # Configures the JUCE sources included in the plugin target.
@@ -107,8 +107,8 @@ juce_add_binary_data(tremolo_plugin_assets
   SOURCES
     assets/Background.png
     assets/Logo.png
-    # TODO: Add custom font files
-)
+    assets/Inter-Bold.ttf
+    assets/Inter-Medium.ttf)
 
 add_library(tremolo::tremolo_plugin_assets ALIAS tremolo_plugin_assets)
 
@@ -135,8 +135,25 @@ target_link_libraries(
     juce::juce_recommended_warning_flags
 )
 
+# Zip the .vst3 bundle with the README.txt file
+get_target_property(VST3_BUNDLE_PATH TremoloCoursePlugin_VST3 JUCE_PLUGIN_ARTEFACT_FILE)
+cmake_path(GET VST3_BUNDLE_PATH PARENT_PATH VST3_BUNDLE_OUTPUT_DIR)
+add_custom_command(
+  TARGET TremoloCoursePlugin_VST3
+  POST_BUILD
+  WORKING_DIRECTORY ${VST3_BUNDLE_OUTPUT_DIR}
+  # For some reason, if the README.txt is in a different directory, zipping it fails, thus, we need to copy it first
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/assets/README.txt" ${VST3_BUNDLE_OUTPUT_DIR}
+  COMMAND ${CMAKE_COMMAND} -E tar cvf "${VST3_BUNDLE_OUTPUT_DIR}/Tremolo.zip" --format=zip -- "${VST3_BUNDLE_PATH}" README.txt
+)
+
 # In Visual Studio this command provides a nice grouping of source files in "filters".
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+option(BUILD_EXAMPLES "When on, the supplied example apps will be added as targets and built" OFF)
+if(BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 option(BUILD_TESTS "When on, will download the GoogleTest framework and add the automated tests project" OFF)
 if(BUILD_TESTS)
